@@ -1,0 +1,1 @@
+Our internal cluster is called KubeNexus and it runs exactly 5 nodes.
