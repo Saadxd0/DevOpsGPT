@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Terminal, Send, Cpu, Database, FileText, Loader2, Sparkles, ShieldCheck, Activity, Bot, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';

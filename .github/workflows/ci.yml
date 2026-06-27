@@ -2,7 +2,7 @@
 # DevOpsGPT — Continuous Integration Pipeline
 # =============================================================================
 # Triggers: push to main/develop, all pull requests
-# Stages:  Lint → Test → Security Scan → Build → Docker (main only)
+# Stages:  Lint → Test → Build → Security Scan
 # =============================================================================
 
 name: CI Pipeline
@@ -31,8 +31,6 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "22"
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository_owner }}/devopsgpt
 
 permissions:
   contents: read
@@ -235,71 +233,8 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high || true
 
-      # -- Secret scanning --
-      - name: Gitleaks — Secret detection
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   # ===========================================================================
-  # STAGE 6: Docker Build & Push (main branch only)
-  # ===========================================================================
-  docker-build:
-    name: "🐳 Docker Build & Push"
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [backend-test, frontend-build, security-scan]
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        include:
-          - service: backend
-            context: ./backend
-            dockerfile: ./backend/Dockerfile
-          - service: frontend
-            context: ./frontend
-            dockerfile: ./frontend/Dockerfile
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
-          tags: |
-            type=sha,prefix=
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-
-      - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-
-  # ===========================================================================
-  # STAGE 7: Pipeline Summary
+  # STAGE 6: Pipeline Summary
   # ===========================================================================
   ci-summary:
     name: "📊 CI Summary"
